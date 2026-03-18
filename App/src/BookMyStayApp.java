@@ -1,6 +1,6 @@
 import java.util.*;
 
-// Reservation Class (Represents booking intent)
+// Reservation (Booking Request)
 class Reservation {
     private String guestName;
     private String roomType;
@@ -17,38 +17,98 @@ class Reservation {
     public String getRoomType() {
         return roomType;
     }
+}
 
-    @Override
-    public String toString() {
-        return "Guest: " + guestName + " | Room Type: " + roomType;
+// Queue (FIFO)
+class BookingRequestQueue {
+    private Queue<Reservation> queue = new LinkedList<>();
+
+    public void addRequest(Reservation r) {
+        queue.offer(r);
+    }
+
+    public Reservation getNextRequest() {
+        return queue.poll(); // FIFO
+    }
+
+    public boolean isEmpty() {
+        return queue.isEmpty();
     }
 }
 
-// Booking Request Queue (FIFO)
-class BookingRequestQueue {
-    private Queue<Reservation> queue;
+// Inventory Service
+class RoomInventory {
+    private Map<String, Integer> inventory = new HashMap<>();
 
-    public BookingRequestQueue() {
-        queue = new LinkedList<>();
+    public void addRoom(String type, int count) {
+        inventory.put(type, count);
     }
 
-    // Add booking request
-    public void addRequest(Reservation reservation) {
-        queue.offer(reservation);
-        System.out.println("Request added: " + reservation);
+    public int getAvailability(String type) {
+        return inventory.getOrDefault(type, 0);
     }
 
-    // View all queued requests
-    public void displayQueue() {
-        System.out.println("\n--- Booking Request Queue (FIFO Order) ---");
+    public void reduceAvailability(String type) {
+        inventory.put(type, getAvailability(type) - 1);
+    }
 
-        if (queue.isEmpty()) {
-            System.out.println("No booking requests.");
-            return;
+    public void displayInventory() {
+        System.out.println("\n--- Updated Inventory ---");
+        for (Map.Entry<String, Integer> entry : inventory.entrySet()) {
+            System.out.println(entry.getKey() + " : " + entry.getValue());
         }
+    }
+}
 
-        for (Reservation r : queue) {
-            System.out.println(r);
+// Booking Service (Core Logic)
+class BookingService {
+
+    private Set<String> allocatedRoomIds = new HashSet<>();
+    private Map<String, Set<String>> roomAllocations = new HashMap<>();
+    private int roomCounter = 1;
+
+    public void processBookings(BookingRequestQueue queue, RoomInventory inventory) {
+
+        System.out.println("\n--- Processing Booking Requests ---");
+
+        while (!queue.isEmpty()) {
+
+            Reservation request = queue.getNextRequest();
+            String type = request.getRoomType();
+
+            // Step 1: Check availability
+            if (inventory.getAvailability(type) > 0) {
+
+                // Step 2: Generate unique room ID
+                String roomId = type.substring(0, 1).toUpperCase() + roomCounter++;
+
+                // Step 3: Ensure uniqueness using Set
+                if (!allocatedRoomIds.contains(roomId)) {
+
+                    allocatedRoomIds.add(roomId);
+
+                    // Step 4: Map room type to allocated IDs
+                    roomAllocations.putIfAbsent(type, new HashSet<>());
+                    roomAllocations.get(type).add(roomId);
+
+                    // Step 5: Update inventory immediately
+                    inventory.reduceAvailability(type);
+
+                    // Step 6: Confirm booking
+                    System.out.println("Booking Confirmed!");
+                    System.out.println("Guest: " + request.getGuestName());
+                    System.out.println("Room Type: " + type);
+                    System.out.println("Room ID: " + roomId);
+                    System.out.println("---------------------------");
+
+                } else {
+                    System.out.println("Duplicate Room ID detected! Skipping...");
+                }
+
+            } else {
+                System.out.println("Booking Failed for " + request.getGuestName() +
+                        " (No availability for " + type + ")");
+            }
         }
     }
 }
@@ -59,22 +119,31 @@ public class BookMyStayApp {
     public static void main(String[] args) {
 
         System.out.println("===== Book My Stay App =====");
-        System.out.println("Version: v5.0");
+        System.out.println("Version: v6.0");
         System.out.println("============================");
 
-        // Step 1: Initialize Booking Queue
-        BookingRequestQueue bookingQueue = new BookingRequestQueue();
+        // Step 1: Setup Inventory
+        RoomInventory inventory = new RoomInventory();
+        inventory.addRoom("Single", 2);
+        inventory.addRoom("Double", 1);
+        inventory.addRoom("Suite", 1);
 
-        // Step 2: Simulate Guest Booking Requests (Arrival Order)
-        bookingQueue.addRequest(new Reservation("Hemanth", "Single"));
-        bookingQueue.addRequest(new Reservation("Arun", "Double"));
-        bookingQueue.addRequest(new Reservation("Priya", "Suite"));
-        bookingQueue.addRequest(new Reservation("Kiran", "Single"));
+        // Step 2: Create Booking Queue
+        BookingRequestQueue queue = new BookingRequestQueue();
 
-        // Step 3: Display Queue (FIFO Order)
-        bookingQueue.displayQueue();
+        queue.addRequest(new Reservation("Hemanth", "Single"));
+        queue.addRequest(new Reservation("Arun", "Single"));
+        queue.addRequest(new Reservation("Priya", "Single")); // Should fail
+        queue.addRequest(new Reservation("Kiran", "Suite"));
+        queue.addRequest(new Reservation("Divya", "Double"));
 
-        System.out.println("\nAll requests stored in arrival order (FIFO).");
-        System.out.println("No rooms allocated yet. Waiting for processing stage.");
+        // Step 3: Process Bookings
+        BookingService bookingService = new BookingService();
+        bookingService.processBookings(queue, inventory);
+
+        // Step 4: Display Final Inventory
+        inventory.displayInventory();
+
+        System.out.println("\nAll bookings processed successfully!");
     }
 }
