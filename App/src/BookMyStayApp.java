@@ -1,74 +1,84 @@
 import java.util.*;
 
-// Add-On Service Class
-class Service {
-    private String name;
-    private double price;
+// Reservation (Confirmed Booking)
+class Reservation {
+    private String reservationId;
+    private String guestName;
+    private String roomType;
 
-    public Service(String name, double price) {
-        this.name = name;
-        this.price = price;
+    public Reservation(String reservationId, String guestName, String roomType) {
+        this.reservationId = reservationId;
+        this.guestName = guestName;
+        this.roomType = roomType;
     }
 
-    public String getName() {
-        return name;
+    public String getReservationId() {
+        return reservationId;
     }
 
-    public double getPrice() {
-        return price;
+    public String getGuestName() {
+        return guestName;
+    }
+
+    public String getRoomType() {
+        return roomType;
     }
 
     @Override
     public String toString() {
-        return name + " (₹" + price + ")";
+        return "Reservation ID: " + reservationId +
+                " | Guest: " + guestName +
+                " | Room Type: " + roomType;
     }
 }
 
-// Add-On Service Manager
-class AddOnServiceManager {
+// Booking History (Stores Data)
+class BookingHistory {
+    private List<Reservation> history = new ArrayList<>();
 
-    // Map: Reservation ID → List of Services
-    private Map<String, List<Service>> serviceMap = new HashMap<>();
-
-    // Add service to reservation
-    public void addService(String reservationId, Service service) {
-        serviceMap.putIfAbsent(reservationId, new ArrayList<>());
-        serviceMap.get(reservationId).add(service);
-
-        System.out.println("Added service: " + service +
-                " to Reservation ID: " + reservationId);
+    // Add confirmed booking
+    public void addReservation(Reservation reservation) {
+        history.add(reservation);
     }
 
-    // Display services for a reservation
-    public void displayServices(String reservationId) {
+    // Retrieve all bookings
+    public List<Reservation> getAllReservations() {
+        return history;
+    }
+}
 
-        System.out.println("\n--- Services for Reservation: " + reservationId + " ---");
+// Reporting Service (Read-Only)
+class BookingReportService {
 
-        List<Service> services = serviceMap.get(reservationId);
+    // Display all bookings
+    public void showAllBookings(List<Reservation> reservations) {
+        System.out.println("\n--- Booking History ---");
 
-        if (services == null || services.isEmpty()) {
-            System.out.println("No services selected.");
+        if (reservations.isEmpty()) {
+            System.out.println("No bookings found.");
             return;
         }
 
-        for (Service s : services) {
-            System.out.println(s);
+        for (Reservation r : reservations) {
+            System.out.println(r);
         }
     }
 
-    // Calculate total add-on cost
-    public double calculateTotalCost(String reservationId) {
-        double total = 0;
+    // Generate summary report
+    public void generateSummary(List<Reservation> reservations) {
+        System.out.println("\n--- Booking Summary Report ---");
 
-        List<Service> services = serviceMap.get(reservationId);
+        Map<String, Integer> summary = new HashMap<>();
 
-        if (services != null) {
-            for (Service s : services) {
-                total += s.getPrice();
-            }
+        for (Reservation r : reservations) {
+            summary.put(r.getRoomType(),
+                    summary.getOrDefault(r.getRoomType(), 0) + 1);
         }
 
-        return total;
+        for (Map.Entry<String, Integer> entry : summary.entrySet()) {
+            System.out.println("Room Type: " + entry.getKey() +
+                    " | Total Bookings: " + entry.getValue());
+        }
     }
 }
 
@@ -78,38 +88,27 @@ public class BookMyStayApp {
     public static void main(String[] args) {
 
         System.out.println("===== Book My Stay App =====");
-        System.out.println("Version: v7.0");
+        System.out.println("Version: v8.0");
         System.out.println("============================");
 
-        // Example Reservation IDs (from Use Case 6)
-        String res1 = "S1";
-        String res2 = "S2";
+        // Step 1: Initialize Booking History
+        BookingHistory history = new BookingHistory();
 
-        // Step 1: Create Services
-        Service wifi = new Service("WiFi Upgrade", 200);
-        Service breakfast = new Service("Breakfast", 500);
-        Service spa = new Service("Spa Access", 1500);
+        // Step 2: Simulate confirmed bookings (from Use Case 6)
+        history.addReservation(new Reservation("S1", "Hemanth", "Single"));
+        history.addReservation(new Reservation("S2", "Arun", "Double"));
+        history.addReservation(new Reservation("S3", "Priya", "Suite"));
+        history.addReservation(new Reservation("S4", "Kiran", "Single"));
 
-        // Step 2: Initialize Add-On Manager
-        AddOnServiceManager manager = new AddOnServiceManager();
+        // Step 3: Reporting
+        BookingReportService reportService = new BookingReportService();
 
-        // Step 3: Guest selects services
-        manager.addService(res1, wifi);
-        manager.addService(res1, breakfast);
+        // Display all bookings
+        reportService.showAllBookings(history.getAllReservations());
 
-        manager.addService(res2, spa);
+        // Generate summary
+        reportService.generateSummary(history.getAllReservations());
 
-        // Step 4: Display services
-        manager.displayServices(res1);
-        manager.displayServices(res2);
-
-        // Step 5: Calculate total cost
-        System.out.println("\nTotal Add-On Cost for " + res1 + ": ₹" +
-                manager.calculateTotalCost(res1));
-
-        System.out.println("Total Add-On Cost for " + res2 + ": ₹" +
-                manager.calculateTotalCost(res2));
-
-        System.out.println("\nAdd-on services processed successfully!");
+        System.out.println("\nReporting completed successfully!");
     }
 }
